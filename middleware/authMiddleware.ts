@@ -3,12 +3,13 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest, JwtPayloadCustom } from '../types/AuthRequest';
 
-const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : null;
 
   if (!token) {
-    return res.status(401).json({ message: 'אין הרשאה. טוקן לא סופק' });
+    res.status(401).json({ message: 'אין הרשאה. טוקן לא סופק' });
+    return;
   }
 
   try {
