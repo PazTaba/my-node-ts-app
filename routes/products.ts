@@ -16,14 +16,18 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// GET all products
 router.get('/', async (req, res) => {
     try {
         const { category, search } = req.query;
+        console.log('📥 GET /products - Query Params:', req.query);
+
         const filter: any = {};
         if (category && category !== 'all') filter.category = category;
         if (search) filter.name = { $regex: search as string, $options: 'i' };
 
         const products = await Product.find(filter).sort({ createdAt: -1 });
+        console.log(`📤 Returning ${products.length} products`);
         res.json(products);
     } catch (error) {
         console.error('❌ Error loading products:', error);
@@ -31,12 +35,19 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET single product by ID
 router.get('/:id', async (req: any, res: any) => {
     try {
-        const product = await Product.findById(req.params.id).populate('userId', 'name image phone'); // אם אתה רוצה מידע על המשתמש
+        const { id } = req.params;
+        console.log('📥 GET /products/:id - ID:', id);
+
+        const product = await Product.findById(id).populate('userId', 'name image phone');
         if (!product) {
+            console.warn(`⚠️ Product with ID ${id} not found`);
             return res.status(404).json({ message: 'Product not found' });
         }
+
+        console.log(`📤 Returning product: ${product.name}`);
         res.json(product);
     } catch (error) {
         console.error('❌ Error fetching product:', error);
@@ -44,9 +55,13 @@ router.get('/:id', async (req: any, res: any) => {
     }
 });
 
-
+// POST new product
 router.post('/add', upload.single('image'), async (req: any, res: any) => {
     try {
+        console.log('📥 POST /products/add');
+        console.log('📝 Body:', req.body);
+        console.log('🖼️ Uploaded file:', req.file);
+
         const {
             name,
             price,
@@ -62,8 +77,9 @@ router.post('/add', upload.single('image'), async (req: any, res: any) => {
 
         const image = req.file ? `/uploads/${req.file.filename}` : undefined;
 
-        // בדיקת שדות חובה
+        // Validate required fields
         if (!name || !price || !distance || !userId || !image || !category || !latitude || !longitude || !description || !condition || !address) {
+            console.warn('⚠️ Missing fields in request');
             return res.status(400).json({ message: 'Missing fields' });
         }
 
@@ -85,12 +101,12 @@ router.post('/add', upload.single('image'), async (req: any, res: any) => {
         await newProduct.save();
         await User.findByIdAndUpdate(userId, { $push: { products: newProduct._id } });
 
+        console.log(`✅ Product saved: ${newProduct.name} (${newProduct._id})`);
         res.status(201).json({ message: 'Product saved', product: newProduct });
     } catch (error) {
         console.error('❌ Error saving product:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
-
 
 export default router;
